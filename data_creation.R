@@ -22,7 +22,7 @@ access_token_secret <- "sS8RLfvQuq7VjJs7QNL3BOA20FRrlQzVjm7aYsWt1vF5S"
         
         tweet_tid = one_tweet_content$id_str,
         tweet_uid = one_tweet_content$user$id_str,
-        tweet_time = one_tweet_content$created_at,
+        tweet_time = as.POSIXct(one_tweet_content$created_at, format = "%a %b %d %H:%M:%S %z %Y"),
         tweet_text = one_tweet_content$text,
         tweet_in_reply_tid = ifelse(!is.null(one_tweet_content$in_reply_to_status_id_str),one_tweet_content$in_reply_to_status_id_str,NA),
         tweet_in_reply_uid = ifelse(!is.null(one_tweet_content$in_reply_to_user_id_str),one_tweet_content$in_reply_to_user_id_str,NA),
@@ -35,7 +35,10 @@ access_token_secret <- "sS8RLfvQuq7VjJs7QNL3BOA20FRrlQzVjm7aYsWt1vF5S"
   }
   
   timeline_filler <- function(timeline){
+  # timeline <-  timelineContent
     for(i in 1:length(timeline)){
+      # i <- 2
+      cat(i,"\n")
       j <- 1
       
       new_tweet_list <- list()
@@ -43,7 +46,7 @@ access_token_secret <- "sS8RLfvQuq7VjJs7QNL3BOA20FRrlQzVjm7aYsWt1vF5S"
       new_tweet <- data.table(
         tweet_tid = timeline[[i]]$id_str,
         tweet_uid = timeline[[i]]$user$id_str,
-        tweet_time = timeline[[i]]$created_at,
+        tweet_time = as.POSIXct(timeline[[i]]$created_at, format = "%a %b %d %H:%M:%S %z %Y"),
         tweet_text = timeline[[i]]$text,
         tweet_in_reply_tid = ifelse(!is.null(timeline[[i]]$in_reply_to_status_id_str),timeline[[i]]$in_reply_to_status_id_str,NA),
         tweet_in_reply_uid = ifelse(!is.null(timeline[[i]]$in_reply_to_user_id_str),timeline[[i]]$in_reply_to_user_id_str,NA),
@@ -86,35 +89,65 @@ access_token_secret <- "sS8RLfvQuq7VjJs7QNL3BOA20FRrlQzVjm7aYsWt1vF5S"
         }
       }
     }
+    tweet_dt
   }
   
+  #Get Timeline
   GETurl    = paste0("https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=",
                      user,"&count=", n_to_get,"&exclude_replies=false&include_rts=true")
-  # GETurl <- "GET https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=twitterapi&count=2"
-  
   timelineRaw = httr::GET(GETurl, sig)
   timelineContent = httr::content(timelineRaw)
   
-  saveRDS(tweet_dt,"tweet_dt.RDS")
+  #Get Timeline Tweets
+  tweet_dt <- timeline_filler(timelineContent)
   
   tweet_dt[,tweet_time := as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")]
   
+  #Find earliest tweet so far
   min_civ_tweet <- tweet_dt[tweet_dt[tweet_uid == 38705128,.I[tweet_time == min(tweet_time)], tweet_uid]$V1]
   
 
+  #Go further back in timeline
+  GETurl    = paste0("https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=",
+                     user,"&count=", n_to_get,"&exclude_replies=false&include_rts=true&max_id=", min_civ_tweet$tweet_tid)
+  timelineRaw = httr::GET(GETurl, sig)
+  timelineContent = httr::content(timelineRaw)
+  #MOARE timeline tweets
+  new_tweet_dt <- timeline_filler(timelineContent)
+  new_tweet_dt[,tweet_time := as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")]
+  
+  tweet_dt <- rbind(tweet_dt, new_tweet_dt)
+  
+  tweet_dt <- unique(tweet_dt)
+  
+
+  #Find earliest tweet
+  min_civ_tweet <- tweet_dt[tweet_dt[tweet_uid == 38705128,.I[tweet_time == min(tweet_time)], tweet_uid]$V1]
   
   GETurl    = paste0("https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=",
                      user,"&count=", n_to_get,"&exclude_replies=false&include_rts=true&max_id=", min_civ_tweet$tweet_tid)
-  # GETurl <- "GET https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=twitterapi&count=2"
   timelineRaw = httr::GET(GETurl, sig)
   timelineContent = httr::content(timelineRaw)
   
-  timeline_filler(timelineContent)
-
+  new_tweet_dt <- timeline_filler(timelineContent)
+  new_tweet_dt[,tweet_time := as.POSIXct(tweet_time, format = "%a %b %d %H:%M:%S %z %Y")]
+  
+  tweet_dt <- rbind(tweet_dt, new_tweet_dt)
+  
+  tweet_dt <- unique(tweet_dt)
+  
+  
+  
   saveRDS(tweet_dt,"tweet_dt.RDS")
   
   
-  as.POSIXct("Thu Dec 21 21:51:56 +0000 2017", format = "%a %b %d %H:%M:%S %z %Y")
+  # heck <- timeline_filler(timelineContent[1:10])
+  # ids_test <- unlist(lapply(timelineContent[1:10],function(x){x$id_str}))
+  # ids_test %in% tweet_dt$tweet_tid
+  # saveRDS(tweet_dt,"tweet_dt.RDS")
+  # 
+  # 
+  # as.POSIXct("Thu Dec 21 21:51:56 +0000 2017", format = "%a %b %d %H:%M:%S %z %Y")
   
   # tweet_dt <- rbind(tweet_dt, new_tweet_dt)
   # tweet_dt_list[[i]] <- new_tweet_dt 
