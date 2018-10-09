@@ -1,8 +1,8 @@
 library(data.table)
-api_key <- "GbCx5cmXSsPr7N4oAjI4Ub0C6"
-api_secret <- "3xfJdbQpG2RVbZiOd1xz2abLtQdU6QAfyKKTKMvhtfem21Ao7H"
-access_token <- "4919608432-k0bdpcBOA8qnJPoP63TCl1W5cHHYCCnKEluFUTy"
-access_token_secret <- "sS8RLfvQuq7VjJs7QNL3BOA20FRrlQzVjm7aYsWt1vF5S"
+api_key <- "****"
+api_secret <- "****"
+access_token <- "****"
+access_token_secret <- "****"
 #custom function to get tweets by a username
 # get_user_tweets = function(user, n, api_key, api_secret, access_token, access_token_secret) {
   #set up oauth
